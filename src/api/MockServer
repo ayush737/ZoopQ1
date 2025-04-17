@@ -1,0 +1,38 @@
+import com.github.tomakehurst.wiremock.WireMockServer;
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+
+public class MockServer {
+    public static void main(String[] args) {
+        WireMockServer wireMockServer = new WireMockServer(8080);
+        wireMockServer.start();
+
+        configureFor("localhost", 8080);
+
+        // Valid city mock
+        wireMockServer.stubFor(get(urlPathEqualTo("/getWeather"))
+            .withQueryParam("city", equalTo("London"))
+            .withHeader("x-api-key", equalTo("valid-api-key"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody("{ \"city\": \"London\", \"temperature\": 15, \"humidity\": 60, \"description\": \"Clear\" }")));
+
+        // Invalid city mock
+        wireMockServer.stubFor(get(urlPathEqualTo("/getWeather"))
+            .withQueryParam("city", equalTo("FakeCity"))
+            .withHeader("x-api-key", equalTo("valid-api-key"))
+            .willReturn(aResponse()
+                .withStatus(404)
+                .withHeader("Content-Type", "application/json")
+                .withBody("{ \"error\": \"City not found\" }")));
+
+        // Missing/Invalid API Key
+        wireMockServer.stubFor(get(urlPathEqualTo("/getWeather"))
+            .withQueryParam("city", equalTo("London"))
+            .atPriority(10)
+            .willReturn(aResponse()
+                .withStatus(401)
+                .withHeader("Content-Type", "application/json")
+                .withBody("{ \"error\": \"Unauthorized\" }")));
+    }
+}
